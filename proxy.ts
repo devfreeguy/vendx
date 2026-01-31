@@ -40,7 +40,7 @@ function rateLimit(ip: string) {
   return false;
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const ip = request.headers.get("x-forwarded-for") ?? "127.0.0.1";
 
   if (rateLimit(ip)) {
