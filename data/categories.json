@@ -1,0 +1,106 @@
+[
+  {
+    "label": "Food",
+    "href": "/products?category=Food",
+    "items": [
+      {
+        "label": "Produce",
+        "href": "/products?category=Food&subCategory=Produce"
+      },
+      {
+        "label": "Grains",
+        "href": "/products?category=Food&subCategory=Grains"
+      },
+      {
+        "label": "Snacks",
+        "href": "/products?category=Food&subCategory=Snacks"
+      },
+      {
+        "label": "Drinks",
+        "href": "/products?category=Food&subCategory=Drinks"
+      },
+      {
+        "label": "Spices",
+        "href": "/products?category=Food&subCategory=Spices"
+      }
+    ]
+  },
+  {
+    "label": "Fashion",
+    "href": "/products?category=Fashion",
+    "items": [
+      {
+        "label": "Men",
+        "href": "/products?category=Fashion&subCategory=Men"
+      },
+      {
+        "label": "Women",
+        "href": "/products?category=Fashion&subCategory=Women"
+      },
+      {
+        "label": "Traditional",
+        "href": "/products?category=Fashion&subCategory=Traditional"
+      },
+      {
+        "label": "Shoes",
+        "href": "/products?category=Fashion&subCategory=Shoes"
+      },
+      {
+        "label": "Accessories",
+        "href": "/products?category=Fashion&subCategory=Accessories"
+      }
+    ]
+  },
+  {
+    "label": "Electronics",
+    "href": "/products?category=Electronics",
+    "items": [
+      {
+        "label": "Phones",
+        "href": "/products?category=Electronics&subCategory=Phones"
+      },
+      {
+        "label": "Computers",
+        "href": "/products?category=Electronics&subCategory=Computers"
+      },
+      {
+        "label": "Audio",
+        "href": "/products?category=Electronics&subCategory=Audio"
+      },
+      {
+        "label": "TVs",
+        "href": "/products?category=Electronics&subCategory=TVs"
+      },
+      {
+        "label": "Accessories",
+        "href": "/products?category=Electronics&subCategory=Accessories"
+      }
+    ]
+  },
+  {
+    "label": "Home",
+    "href": "/products?category=Home",
+    "items": [
+      {
+        "label": "Furniture",
+        "href": "/products?category=Home&subCategory=Furniture"
+      },
+      {
+        "label": "Kitchen",
+        "href": "/products?category=Home&subCategory=Kitchen"
+      },
+      {
+        "label": "Decor",
+        "href": "/products?category=Home&subCategory=Decor"
+      },
+      {
+        "label": "Hardware",
+        "href": "/products?category=Home&subCategory=Hardware"
+      },
+      {
+        "label": "Bedding",
+        "href": "/products?category=Home&subCategory=Bedding"
+      }
+    ]
+  }
+]

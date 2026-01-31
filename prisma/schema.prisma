@@ -1,0 +1,203 @@
+generator client {
+    provider        = "prisma-client-js"
+    previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+    provider = "postgresql"
+}
+
+enum Role {
+    BUYER
+    VENDOR
+    ADMIN
+}
+
+model User {
+    id                  String    @id
+    email               String    @unique
+    password            String
+    role                Role      @default(BUYER)
+    createdAt           DateTime  @default(now())
+    updatedAt           DateTime  @updatedAt
+    products            Product[]
+    orders              Order[]
+    cart                Cart?
+    name                String?
+    profilePicture      String?
+    onboardingCompleted Boolean   @default(false)
+    wallet              Wallet?
+    addresses           Address[]
+    lastCartSyncId      String?
+}
+
+model Address {
+    id        String   @id @default(cuid())
+    userId    String
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    firstName String
+    lastName  String
+    email     String
+    street    String
+    city      String
+    state     String
+    country   String
+    zipCode   String
+    isDefault Boolean  @default(false)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+model Product {
+    id            String      @id
+    title         String
+    description   String
+    price         Float
+    discountPrice Float?
+    stock         Int
+    sku           String      @unique
+    images        String[]
+    category      String
+    subcategory   String?
+    tags          String[]
+    vendorId      String
+    vendor        User        @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+    createdAt     DateTime    @default(now())
+    updatedAt     DateTime    @updatedAt
+    orderItems    OrderItem[]
+    cartItems     CartItem[]
+}
+
+model Cart {
+    id        String     @id
+    userId    String     @unique
+    user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+    items     CartItem[]
+    createdAt DateTime   @default(now())
+    updatedAt DateTime   @updatedAt
+}
+
+model CartItem {
+    id        String  @id
+    cartId    String
+    cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+    productId String
+    product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+    quantity  Int
+}
+
+model Order {
+    id              String        @id
+    buyerId         String
+    buyer           User          @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+    status          OrderStatus   @default(PENDING)
+    totalAmount     Float
+    shippingAddress Json?
+    bchAddress      String        @unique
+    bchAmount       Float
+    usdAmount       Float // Store original USD amount
+    exchangeRate    Float // Store rate used for conversion
+    rateExpiresAt   DateTime // Expiration for this specific rate quote
+    derivationIndex Int           @unique @default(autoincrement())
+    createdAt       DateTime      @default(now())
+    updatedAt       DateTime      @updatedAt
+    items           OrderItem[]
+    transactions    Transaction[]
+}
+
+enum OrderStatus {
+    PENDING
+    PAID
+    COMPLETED
+    CANCELLED
+    UNDERPAID
+    EXPIRED
+}
+
+model OrderItem {
+    id              String          @id
+    orderId         String
+    order           Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+    productId       String
+    product         Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+    quantity        Int
+    priceAtPurchase Float
+    status          OrderItemStatus @default(PENDING)
+}
+
+enum OrderItemStatus {
+    PENDING
+    SHIPPED
+}
+
+// WALLET SYSTEM
+
+model Wallet {
+    id        String    @id @default(cuid())
+    userId    String    @unique
+    user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+    xpub      String? // Master public key for deriving addresses (if using HD)
+    address   String? // Main deposit address or static address
+    createdAt DateTime  @default(now())
+    updatedAt DateTime  @updatedAt
+    balances  Balance[]
+}
+
+model Balance {
+    id        String   @id @default(cuid())
+    walletId  String
+    wallet    Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+    currency  String // e.g., "BCH", "USD"
+    amount    Float    @default(0.0)
+    locked    Float    @default(0.0) // Amount locked in pending orders/withdrawals
+    updatedAt DateTime @updatedAt
+
+    @@unique([walletId, currency])
+}
+
+model Transaction {
+    id          String            @id @default(cuid())
+    orderId     String?
+    order       Order?            @relation(fields: [orderId], references: [id])
+    walletId    String? // For internal ledger (e.g. vendor wallet)
+    txHash      String? // Blockchain transaction ID
+    amount      Float
+    currency    String // "BCH", "USD"
+    type        TransactionType
+    status      TransactionStatus @default(PENDING)
+    metadata    Json? // Extra data (e.g., confirmations, block height)
+    createdAt   DateTime          @default(now())
+    updatedAt   DateTime          @updatedAt
+    settlements Settlement[]
+}
+
+enum TransactionType {
+    DEPOSIT
+    WITHDRAWAL
+    PAYMENT
+    REFUND
+    FEE
+}
+
+enum TransactionStatus {
+    PENDING
+    CONFIRMED
+    FAILED
+}
+
+model Settlement {
+    id            String           @id @default(cuid())
+    transactionId String
+    transaction   Transaction      @relation(fields: [transactionId], references: [id])
+    amount        Float
+    currency      String
+    status        SettlementStatus @default(PENDING)
+    processedAt   DateTime?
+    createdAt     DateTime         @default(now())
+}
+
+enum SettlementStatus {
+    PENDING
+    COMPLETED
+    FAILED
+}

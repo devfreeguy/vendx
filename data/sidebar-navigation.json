@@ -1,0 +1,16 @@
+{
+  "vendor": [
+    { "icon": "LayoutDashboard", "label": "Dashboard", "href": "/dashboard" },
+    { "icon": "Package", "label": "Products", "href": "/dashboard/products" },
+    { "icon": "ShoppingCart", "label": "Orders", "href": "/dashboard/orders" },
+    { "icon": "CreditCard", "label": "Payments", "href": "/dashboard/payments" },
+    { "icon": "Settings", "label": "Settings", "href": "/dashboard/settings" }
+  ],
+  "admin": [
+    { "icon": "LayoutDashboard", "label": "Dashboard", "href": "/admin" },
+    { "icon": "ShoppingCart", "label": "Orders", "href": "/admin/orders" },
+    { "icon": "Users", "label": "Users", "href": "/admin/users" },
+    { "icon": "Store", "label": "Vendors", "href": "/admin/vendors" },
+    { "icon": "Settings", "label": "Settings", "href": "/admin/settings" }
+  ]
+}
