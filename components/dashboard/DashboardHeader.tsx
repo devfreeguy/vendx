@@ -18,12 +18,14 @@ interface DashboardHeaderProps {
   title?: string;
   description?: string;
   action?: React.ReactNode;
+  navType?: "admin" | "vendor";
 }
 
 export function DashboardHeader({
   title,
   description,
   action,
+  navType,
 }: DashboardHeaderProps) {
   const pathname = usePathname();
 
@@ -71,7 +73,7 @@ export function DashboardHeader({
                   Dashboard navigation sidebar
                 </SheetDescription>
               </div>
-              <SidebarContent isMobile={true} />
+              <SidebarContent isMobile={true} navType={navType} />
             </SheetContent>
           </Sheet>
         </div>

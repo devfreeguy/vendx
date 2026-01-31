@@ -19,6 +19,7 @@ export const metadata: Metadata = {
 };
 
 import { ThemeProvider } from "@/components/theme-provider";
+import { AuthProvider } from "@/components/providers/AuthProvider";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ScrollToTop } from "@/components/ui/ScrollToTop";
 
@@ -42,12 +43,14 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <ScrollArea className="h-screen w-full">
-            {children}
-            {modal}
-            <ScrollToTop />
-            <Toaster />
-          </ScrollArea>
+          <AuthProvider>
+            <ScrollArea className="h-screen w-full">
+              {children}
+              {modal}
+              <ScrollToTop />
+              <Toaster />
+            </ScrollArea>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -1,119 +1,52 @@
-import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth";
-import { redirect } from "next/navigation";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+"use client";
+
+import { useEffect, useState } from "react";
+import api from "@/lib/axios";
+import { OrdersTable } from "@/components/dashboard/OrdersTable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
 
-export default async function AdminOrdersPage() {
-  const session = await getSession();
+export default function AdminOrdersPage() {
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Basic Admin Check (role based)
-  if (!session || session.role !== "ADMIN") {
-    redirect("/dashboard");
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        // We'll need GET /api/admin/orders
+        const res = await api.get("/admin/orders");
+        setOrders(Array.isArray(res) ? res : []);
+      } catch (err) {
+        console.error("Failed to fetch admin orders", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchOrders();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
-  const orders = await prisma.order.findMany({
-    orderBy: { createdAt: "desc" },
-    include: {
-      buyer: { select: { email: true } },
-      transactions: { select: { txHash: true, status: true, amount: true } },
-    },
-    take: 50, // Limit for now
-  });
-
   return (
-    <div className="p-8 space-y-6">
+    <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8">
+      <div className="flex items-center justify-between">
+        <h2 className="text-3xl font-bold tracking-tight">
+          Global Order History
+        </h2>
+      </div>
+
       <Card>
         <CardHeader>
-          <CardTitle>Global Order Monitoring</CardTitle>
+          <CardTitle>Recent Orders</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Order ID</TableHead>
-                <TableHead>Buyer</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Total (USD)</TableHead>
-                <TableHead>BCH Amount</TableHead>
-                <TableHead>BCH Address</TableHead>
-                <TableHead>Transactions</TableHead>
-                <TableHead>Created At</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {orders.map((order) => (
-                <TableRow key={order.id}>
-                  <TableCell className="font-mono text-xs">
-                    {order.id}
-                  </TableCell>
-                  <TableCell>{order.buyer.email}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={
-                        order.status === "PAID"
-                          ? "default" // "success" if available, else default (primary) often green-ish or black
-                          : order.status === "PENDING"
-                            ? "outline"
-                            : order.status === "EXPIRED" ||
-                                order.status === "CANCELLED"
-                              ? "destructive"
-                              : "secondary"
-                      }
-                      className={
-                        order.status === "PAID"
-                          ? "bg-green-600 hover:bg-green-700"
-                          : ""
-                      }
-                    >
-                      {order.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>${order.totalAmount.toFixed(2)}</TableCell>
-                  <TableCell>{order.bchAmount.toFixed(8)}</TableCell>
-                  <TableCell
-                    className="font-mono text-xs max-w-37.5 truncate"
-                    title={order.bchAddress}
-                  >
-                    {order.bchAddress}
-                  </TableCell>
-                  <TableCell>
-                    {order.transactions.length > 0 ? (
-                      <div className="flex flex-col gap-1">
-                        {order.transactions.map((tx, i) => (
-                          <span
-                            key={i}
-                            className="text-xs flex items-center gap-1"
-                          >
-                            <Badge
-                              variant="outline"
-                              className="text-[10px] h-4 px-1"
-                            >
-                              {tx.status}
-                            </Badge>
-                            {tx.amount} BCH
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground text-xs">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {order.createdAt.toLocaleString()}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <OrdersTable orders={orders} />
         </CardContent>
       </Card>
     </div>

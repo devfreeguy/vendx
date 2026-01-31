@@ -109,7 +109,7 @@ export function OrdersTable({ orders }: OrdersTableProps) {
           }}
           className="w-full sm:w-auto"
         >
-          <TabsList className="grid w-full grid-cols-5 sm:w-auto">
+          <TabsList className="flex w-full overflow-x-auto sm:grid sm:grid-cols-5 sm:w-auto">
             <TabsTrigger value="ALL">All</TabsTrigger>
             <TabsTrigger value="PENDING">Pending</TabsTrigger>
             <TabsTrigger value="PAID">Paid</TabsTrigger>
@@ -120,21 +120,64 @@ export function OrdersTable({ orders }: OrdersTableProps) {
       </div>
 
       {/* Table */}
-      <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
+      {/* Mobile Card List */}
+      <div className="md:hidden border rounded-xl divide-y divide-border border-border bg-card mb-4">
+        {paginatedOrders.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            No orders found.
+          </div>
+        ) : (
+          paginatedOrders.map((order) => (
+            <div key={order.id} className="p-4 flex flex-col gap-3">
+              <div className="flex justify-between items-start">
+                <div className="flex flex-col">
+                  <span className="font-medium text-sm">{order.customer}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(order.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+                <Badge
+                  variant="outline"
+                  className={getStatusColor(order.status)}
+                >
+                  {order.status}
+                </Badge>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">
+                  {order.itemsCount} item{order.itemsCount !== 1 && "s"}
+                </span>
+                <span className="font-medium">${order.total.toFixed(2)}</span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                asChild
+                className="w-full text-xs h-8"
+              >
+                <Link href={`/dashboard/orders/${order.id}`}>View Details</Link>
+              </Button>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Desktop Table View */}
+      <div className="hidden md:block rounded-xl border border-border bg-card overflow-hidden shadow-sm">
         <ScrollArea className="w-full whitespace-nowrap">
-          <Table className="min-w-200">
+          <Table className="min-w-[600px] md:min-w-full">
             <TableHeader>
               <TableRow className="border-border hover:bg-transparent bg-muted/30">
-                <TableHead className="w-32 font-semibold text-xs uppercase tracking-wider pl-6">
+                <TableHead className="w-32 font-semibold text-xs uppercase tracking-wider pl-6 hidden md:table-cell">
                   Order ID
                 </TableHead>
-                <TableHead className="font-semibold text-xs uppercase tracking-wider">
+                <TableHead className="font-semibold text-xs uppercase tracking-wider hidden lg:table-cell">
                   Date
                 </TableHead>
                 <TableHead className="font-semibold text-xs uppercase tracking-wider">
                   Customer
                 </TableHead>
-                <TableHead className="font-semibold text-xs uppercase tracking-wider">
+                <TableHead className="font-semibold text-xs uppercase tracking-wider hidden sm:table-cell">
                   Items
                 </TableHead>
                 <TableHead className="font-semibold text-xs uppercase tracking-wider">
@@ -164,12 +207,12 @@ export function OrdersTable({ orders }: OrdersTableProps) {
                     key={order.id}
                     className="border-border hover:bg-muted/30 transition-colors"
                   >
-                    <TableCell className="pl-6 py-4">
+                    <TableCell className="pl-6 py-4 hidden md:table-cell">
                       <span className="font-mono text-xs">
                         {order.id.substring(0, 8)}...
                       </span>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden lg:table-cell">
                       <div className="flex items-center gap-2 text-sm text-foreground">
                         <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
                         {new Date(order.createdAt).toLocaleDateString()}
@@ -181,12 +224,12 @@ export function OrdersTable({ orders }: OrdersTableProps) {
                           <User className="h-3.5 w-3.5 text-muted-foreground" />
                           {order.customer}
                         </div>
-                        <div className="text-xs text-muted-foreground pl-5.5">
+                        <div className="text-xs text-muted-foreground pl-5.5 hidden sm:block">
                           {order.customerEmail}
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       <div className="text-sm">
                         {order.itemsCount} item{order.itemsCount !== 1 && "s"}
                       </div>

@@ -34,10 +34,9 @@ export function UserActions() {
   const router = useRouter();
 
   useEffect(() => {
-    fetchUser();
     // Re-hydrate persist store
     useCartStore.persist.rehydrate();
-  }, [fetchUser]);
+  }, []);
 
   const itemCount = items.reduce((acc, item) => acc + item.quantity, 0);
 

@@ -16,6 +16,7 @@ import {
   ChevronLeft,
   ChevronRight,
   LayoutDashboard,
+  DollarSign,
   LogOut,
   Moon,
   Package,
@@ -39,6 +40,7 @@ const iconMap: Record<string, any> = {
   BarChart2,
   Settings,
   Users,
+  DollarSign,
   Store,
   Sun,
   Moon,
@@ -51,21 +53,24 @@ interface SidebarContentProps {
   collapsed?: boolean;
   onToggleCollapse?: () => void;
   isMobile?: boolean;
+  navType?: "admin" | "vendor";
 }
 
 export function SidebarContent({
   collapsed = false,
   onToggleCollapse,
   isMobile = false,
+  navType,
 }: SidebarContentProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
   const { setTheme } = useTheme();
 
-  // Determine navigation based on role. Default to vendor if null unique functionality needs handling
-  const role = user?.role === "ADMIN" ? "admin" : "vendor";
-  const links = sidebarData[role] || sidebarData.vendor;
+  // Determine navigation based on explicit navType or user role.
+  const role = navType || (user?.role === "ADMIN" ? "admin" : "vendor");
+  const links =
+    sidebarData[role as keyof typeof sidebarData] || sidebarData.vendor;
 
   return (
     <div
@@ -176,7 +181,12 @@ export function SidebarContent({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <div className={cn("flex w-full items-center gap-2", collapsed && "flex-col")}>
+        <div
+          className={cn(
+            "flex w-full items-center gap-2",
+            collapsed && "flex-col",
+          )}
+        >
           <button
             onClick={async () => {
               await logout();
@@ -187,17 +197,20 @@ export function SidebarContent({
               "flex items-center gap-3 px-3 py-2.5 w-full flex-1 rounded-lg text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all overflow-hidden whitespace-nowrap",
               collapsed && "justify-center px-2",
             )}
-            >
+          >
             <LogOut className="h-5 w-5 min-w-5" />
             {!collapsed && <span>Logout</span>}
           </button>
-            
+
           {!isMobile && (
             <Button
               variant="outline"
               size="icon"
               onClick={onToggleCollapse}
-              className={cn("hidden lg:flex hover:bg-muted", collapsed ? "w-full h-9" : "size-9")}
+              className={cn(
+                "hidden lg:flex hover:bg-muted",
+                collapsed ? "w-full h-9" : "size-9",
+              )}
             >
               {collapsed ? (
                 <ChevronRight className="h-4 w-4" />
@@ -212,7 +225,11 @@ export function SidebarContent({
   );
 }
 
-export function Sidebar() {
+interface SidebarProps {
+  navType?: "admin" | "vendor";
+}
+
+export function Sidebar({ navType }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (
@@ -225,6 +242,7 @@ export function Sidebar() {
       <SidebarContent
         collapsed={isCollapsed}
         onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
+        navType={navType}
       />
     </aside>
   );
