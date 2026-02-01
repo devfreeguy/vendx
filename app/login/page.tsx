@@ -6,6 +6,7 @@ import { BackButton } from "@/components/ui/BackButton";
 import { Input } from "@/components/ui/input";
 import { ApiError } from "@/lib/axios";
 import { useAuthStore } from "@/store/useAuthStore";
+import { isEmpty } from "lodash";
 import { Loader2, Lock, Mail } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -39,7 +40,7 @@ export default function LoginPage() {
       }
       router.refresh();
     } catch (err: any) {
-      if (err instanceof ApiError) {
+      if (!isEmpty(err)) {
         setError(err.message);
       } else {
         setError("Something went wrong. Please try again.");

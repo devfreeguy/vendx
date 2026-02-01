@@ -1,4 +1,4 @@
-import api from "@/lib/axios";
+import api, { ApiError } from "@/lib/axios";
 import { create } from "zustand";
 
 interface User {
@@ -49,15 +49,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   login: async (email, password) => {
     set({ isLoading: true });
+
     try {
+      // 1. Login
       await api.post("/auth/login", { email, password });
 
-      // Sync Cart Logic
+      // 2. Best-effort cart sync
       if (typeof window !== "undefined") {
         const localCart = localStorage.getItem("vendx_cart");
+
         if (localCart) {
           try {
-            await api.post("/cart/sync", { items: JSON.parse(localCart) });
+            await api.post("/cart/sync", {
+              items: JSON.parse(localCart),
+              syncId: crypto.randomUUID(),
+            });
             localStorage.removeItem("vendx_cart");
           } catch (err) {
             console.error("Cart sync failed", err);
@@ -65,11 +71,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
       }
 
-      // Fetch user to update state
+      // 3. Fetch user
       await get().fetchUser();
+
+      // 4. Success cleanup
+      set({ isLoading: false });
     } catch (error) {
       set({ isLoading: false });
-      throw error;
+
+      if (error instanceof ApiError) {
+        throw error;
+      }
+
+      throw new ApiError("Login failed. Please try again.");
     }
   },
 
