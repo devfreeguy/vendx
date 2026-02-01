@@ -81,25 +81,24 @@ export async function POST(req: Request) {
     }
 
     // Upsert Cart Item
-    const existingItem = await prisma.cartItem.findFirst({
-      where: { cartId: cart.id, productId },
-    });
-
-    if (existingItem) {
-      await prisma.cartItem.update({
-        where: { id: existingItem.id },
-        data: { quantity: existingItem.quantity + quantity },
-      });
-    } else {
-      await prisma.cartItem.create({
-        data: {
-          id: nanoid(),
+    // Upsert Cart Item - Automatic atomic handling via Unique Constraint
+    await prisma.cartItem.upsert({
+      where: {
+        cartId_productId: {
           cartId: cart.id,
           productId,
-          quantity,
         },
-      });
-    }
+      },
+      update: {
+        quantity: { increment: quantity },
+      },
+      create: {
+        id: nanoid(),
+        cartId: cart.id,
+        productId,
+        quantity,
+      },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

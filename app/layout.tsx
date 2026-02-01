@@ -22,6 +22,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ScrollToTop } from "@/components/ui/ScrollToTop";
+import { FloatingNav } from "@/components/layout/FloatingNav";
 
 import { Toaster } from "@/components/ui/sonner";
 
@@ -47,6 +48,7 @@ export default function RootLayout({
             <ScrollArea className="h-screen w-full">
               {children}
               {modal}
+              <FloatingNav />
               <ScrollToTop />
               <Toaster />
             </ScrollArea>

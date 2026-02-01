@@ -7,6 +7,7 @@ import { BackButton } from "@/components/ui/BackButton";
 
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
+import { HeroBackground } from "@/components/ui/HeroBackground";
 
 export default async function ProductDetailsPage({
   params,
@@ -59,11 +60,12 @@ export default async function ProductDetailsPage({
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col relative">
       <Header />
 
-      <main className="flex-1 pt-24 pb-20 max-w-screen">
-        <div className="container mx-auto px-6 lg:px-12">
+      <main className="flex-1 pt-24 pb-20 max-w-screen relative">
+        <HeroBackground className="h-[50vh]" />
+        <div className="container mx-auto px-6 lg:px-12 relative z-10">
           <div className="flex items-center gap-4 mb-8">
             <BackButton
               href="/products"
@@ -88,7 +90,7 @@ export default async function ProductDetailsPage({
           </div>
         </div>
         <div className="border-t border-border">
-          <FeaturedProducts title="You might also like" description="" />
+          <FeaturedProducts title="You might also like" limit={3} />
         </div>
       </main>
 

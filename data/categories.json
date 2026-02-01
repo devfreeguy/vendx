@@ -4,8 +4,8 @@
     "href": "/products?category=Food",
     "items": [
       {
-        "label": "Produce",
-        "href": "/products?category=Food&subCategory=Produce"
+        "label": "Fresh Produce",
+        "href": "/products?category=Food&subCategory=Fresh Produce"
       },
       {
         "label": "Grains",
@@ -74,6 +74,28 @@
       {
         "label": "Accessories",
         "href": "/products?category=Electronics&subCategory=Accessories"
+      }
+    ]
+  },
+  {
+    "label": "Power",
+    "href": "/products?category=Power",
+    "items": [
+      {
+        "label": "Generators",
+        "href": "/products?category=Power&subCategory=Generators"
+      },
+      {
+        "label": "Solar",
+        "href": "/products?category=Power&subCategory=Solar"
+      },
+      {
+        "label": "Inverters",
+        "href": "/products?category=Power&subCategory=Inverters"
+      },
+      {
+        "label": "Batteries",
+        "href": "/products?category=Power&subCategory=Batteries"
       }
     ]
   },

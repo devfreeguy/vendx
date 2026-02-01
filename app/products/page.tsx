@@ -9,11 +9,12 @@ import { Suspense, useEffect, useState } from "react";
 
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
-import { BackButton } from "@/components/ui/BackButton";
 import {
   ProductCard,
   ProductCardSkeleton,
 } from "@/components/products/ProductCard";
+
+import { HeroBackground } from "@/components/ui/HeroBackground";
 
 export default function ProductsPage() {
   return (
@@ -33,7 +34,7 @@ function ProductsPageContent() {
     subCategory: initialSubCategory,
     priceRange: [0, 5000] as [number, number],
     inStock: false,
-});
+  });
 
   // Update filters if URL params change (e.g. navigation)
   useEffect(() => {
@@ -45,15 +46,12 @@ function ProductsPageContent() {
   }, [searchParams]);
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col relative">
       <Header />
-      <main className="flex-1 pt-24 pb-12 max-w-screen">
-        <div className="container mx-auto px-4">
+      <main className="flex-1 pt-24 pb-12 max-w-screen relative">
+        <HeroBackground className="h-[50vh]" />
+        <div className="container mx-auto px-4 pt-12 relative z-10">
           <div className="flex flex-col lg:flex-row gap-8">
-            <BackButton
-              href="/"
-              className="static p-0 mb-8 transform-none border-none text-muted-foreground hover:text-foreground inline-flex"
-            />
             {/* Desktop Filters Sidebar */}
             <aside className="hidden lg:block w-64 shrink-0">
               <div className="sticky top-24">

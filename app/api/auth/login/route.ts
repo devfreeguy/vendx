@@ -34,9 +34,10 @@ export async function POST(req: Request) {
         "VALIDATION_ERROR",
       );
     }
-    console.error("Login API Error:", error);
+    console.error("Login API Error Stack:", error.stack);
+    console.error("Login API Error Detail:", JSON.stringify(error, null, 2));
     return createErrorResponse(
-      "Authentication failed",
+      `Authentication failed: ${error.message}`,
       500,
       "INTERNAL_SERVER_ERROR",
     );

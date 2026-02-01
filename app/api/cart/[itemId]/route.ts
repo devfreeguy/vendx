@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { createErrorResponse } from "@/lib/api-error";
 
+export const dynamic = "force-dynamic";
+
 export async function DELETE(
   req: Request,
   { params }: { params: Promise<{ itemId: string }> },
@@ -12,25 +14,39 @@ export async function DELETE(
     return createErrorResponse("Unauthorized", 401, "UNAUTHORIZED");
   }
 
-  const { itemId } = await params;
+  const { itemId: productId } = await params;
 
   try {
-    // Verify ownership via cart
-    const item = await prisma.cartItem.findUnique({
-      where: { id: itemId },
-      include: { cart: true },
+    // 1. Get user's cart
+    const cart = await prisma.cart.findUnique({
+      where: { userId: session.userId as string },
     });
 
-    if (!item || item.cart.userId !== session.userId) {
+    if (!cart) {
+      return createErrorResponse("Cart not found", 404, "NOT_FOUND");
+    }
+
+    // 2. Find the item in the cart by productId
+    // Note: We use findFirst because we are looking up by non-unique fields relative to global table,
+    // effectively unique within the cart though.
+    const item = await prisma.cartItem.findFirst({
+      where: {
+        cartId: cart.id,
+        productId: productId,
+      },
+    });
+
+    if (!item) {
       return createErrorResponse(
-        "Item not found or forbidden",
+        "Item not found in cart (by product)",
         404,
         "NOT_FOUND",
       );
     }
 
+    // 3. Delete it
     await prisma.cartItem.delete({
-      where: { id: itemId },
+      where: { id: item.id },
     });
 
     return NextResponse.json({ success: true });
@@ -53,7 +69,7 @@ export async function PATCH(
     return createErrorResponse("Unauthorized", 401, "UNAUTHORIZED");
   }
 
-  const { itemId } = await params;
+  const { itemId: productId } = await params;
 
   try {
     const body = await req.json();
@@ -63,21 +79,34 @@ export async function PATCH(
       return createErrorResponse("Invalid quantity", 400, "VALIDATION_ERROR");
     }
 
-    const item = await prisma.cartItem.findUnique({
-      where: { id: itemId },
-      include: { cart: true },
+    // 1. Get user's cart
+    const cart = await prisma.cart.findUnique({
+      where: { userId: session.userId as string },
     });
 
-    if (!item || item.cart.userId !== session.userId) {
+    if (!cart) {
+      return createErrorResponse("Cart not found", 404, "NOT_FOUND");
+    }
+
+    // 2. Find the item
+    const item = await prisma.cartItem.findFirst({
+      where: {
+        cartId: cart.id,
+        productId: productId,
+      },
+    });
+
+    if (!item) {
       return createErrorResponse(
-        "Item not found or forbidden",
+        "Item not found in cart (by product)",
         404,
         "NOT_FOUND",
       );
     }
 
+    // 3. Update
     await prisma.cartItem.update({
-      where: { id: itemId },
+      where: { id: item.id },
       data: { quantity },
     });
 

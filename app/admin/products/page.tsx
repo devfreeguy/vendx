@@ -125,7 +125,7 @@ export default function AdminProductsPage() {
                         )}
                       </div>
                       <div className="flex flex-col">
-                        <span className="font-medium truncate max-w-[200px]">
+                        <span className="font-medium truncate max-w-50">
                           {product.title}
                         </span>
                       </div>

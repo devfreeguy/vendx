@@ -18,6 +18,7 @@ interface CartState {
   items: CartItem[];
   isOpen: boolean;
   isLoading: boolean;
+  isSynced: boolean;
 
   // Actions
   addItem: (item: Omit<CartItem, "quantity">) => Promise<void>;
@@ -34,6 +35,7 @@ export const useCartStore = create<CartState>()(
       items: [],
       isOpen: false,
       isLoading: false,
+      isSynced: false,
 
       addItem: async (product) => {
         const { isAuthenticated } = useAuthStore.getState();
@@ -58,6 +60,9 @@ export const useCartStore = create<CartState>()(
               productId: product.id,
               quantity: 1,
             });
+            set({ isSynced: false }); // Needs re-sync or verification if strictly consistent, but usually one-way is fine.
+            // Actually, if we just added to server, we are technically "synced" for THIS item, but let's keep it simple.
+            // If we set isSynced=false, next reload will fetch truth. That is safe.
           } catch (error) {
             console.error("Failed to add item to server cart", error);
             // Revert optimism? Or let next sync fix it. Reverting is safer but complex here without prev state.
@@ -84,10 +89,8 @@ export const useCartStore = create<CartState>()(
 
         if (isAuthenticated) {
           try {
-            // API uses DELETE /api/cart/[itemId] based on previous context, but here it said /cart/items/itemId.
-            // Checking route.ts for cart: It has GET, POST.
-            // Checking route.ts for cart/[itemId]: DELETE, PATCH.
             await api.delete(`/cart/${itemId}`);
+            set({ isSynced: false });
           } catch (error) {
             console.error("Failed to remove item from server cart", error);
           }
@@ -111,6 +114,7 @@ export const useCartStore = create<CartState>()(
         if (isAuthenticated) {
           try {
             await api.patch(`/cart/${itemId}`, { quantity });
+            set({ isSynced: false });
           } catch (error) {
             console.error("Failed to update quantity on server", error);
           }
@@ -126,15 +130,13 @@ export const useCartStore = create<CartState>()(
 
         set({ isLoading: true });
 
-        // 1. Get Guest Cart Items before they might be cleared or mixed (snapshot)
-        const guestItems = get().items;
+        const { items: guestItems, isSynced } = get();
 
         try {
-          if (guestItems.length > 0) {
-            // 2. Perform Idempotent Sync
+          // If we have items AND we are NOT synced, perform merge (Sync)
+          if (guestItems.length > 0 && !isSynced) {
             const syncId = nanoid(); // Generate unique ID for this sync attempt
 
-            // payload: { items: [...], syncId: "..." }
             const payload = {
               items: guestItems.map((i) => ({
                 productId: i.id,
@@ -143,17 +145,12 @@ export const useCartStore = create<CartState>()(
               syncId,
             };
 
-            // Expected response: { success: true, data: CartWithItems }
             const response = (await api.post<any>(
               "/cart/sync",
               payload,
             )) as any;
-            // The interceptor might return data.data (Cart).
-            // My route returns { success: true, data: result }.
-            // So response should be `result` (Cart Object).
 
             if (response && response.items) {
-              // 3. Update State with Server Truth
               const serverItems = response.items.map((item: any) => ({
                 id: item.product.id,
                 title: item.product.title,
@@ -162,18 +159,13 @@ export const useCartStore = create<CartState>()(
                 vendor: { name: item.product.vendor?.name || "Vendor" },
                 quantity: item.quantity,
               }));
-
-              // This effectively "clears" the guest items by replacing them with the merged server items
-              set({ items: serverItems });
-
-              // If we had a way to explicitly clear "guest storage" vs "auth storage", we would.
-              // But Zustand persist uses one key. By setting items to serverItems, we have synced.
+              set({ items: serverItems, isSynced: true });
             }
           } else {
-            // If no guest items, just fetch server cart (standard fetch)
-            // ... Or we could just call the sync endpoint with empty items?
-            // My API handles empty items -> returns "No items to sync".
-            // So we should do a GET /cart instead if guestItems is empty.
+            // Otherwise, we just fetch the truth from server (GET)
+            // This happens if:
+            // 1. Guest cart was empty (nothing to merge).
+            // 2. We are already isSynced=true (don't re-merge).
             const cart = (await api.get<any>("/cart")) as any;
             if (cart && cart.items) {
               const serverItems = cart.items.map((item: any) => ({
@@ -184,7 +176,10 @@ export const useCartStore = create<CartState>()(
                 vendor: { name: item.product.vendor?.name || "Vendor" },
                 quantity: item.quantity,
               }));
-              set({ items: serverItems });
+              set({ items: serverItems, isSynced: true });
+            } else {
+              // If cart is null/empty on server
+              set({ items: [], isSynced: true });
             }
           }
         } catch (error) {
@@ -196,8 +191,8 @@ export const useCartStore = create<CartState>()(
     }),
     {
       name: "vendx_cart", // key in localStorage
-      skipHydration: true, // We'll manually hydrate or let it handle itself, but we want to control server sync
-      partialize: (state) => ({ items: state.items }), // Only persist items
+      skipHydration: true,
+      partialize: (state) => ({ items: state.items, isSynced: state.isSynced }), // Persist isSynced!
     },
   ),
 );

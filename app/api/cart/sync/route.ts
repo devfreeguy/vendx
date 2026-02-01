@@ -69,25 +69,23 @@ export async function POST(req: Request) {
         });
         if (!product) continue;
 
-        const existingItem = cart.items.find(
-          (i) => i.productId === guestItem.productId,
-        );
-
-        if (existingItem) {
-          await tx.cartItem.update({
-            where: { id: existingItem.id },
-            data: { quantity: existingItem.quantity + guestItem.quantity },
-          });
-        } else {
-          await tx.cartItem.create({
-            data: {
-              id: nanoid(),
+        await tx.cartItem.upsert({
+          where: {
+            cartId_productId: {
               cartId: cart.id,
               productId: guestItem.productId,
-              quantity: guestItem.quantity,
             },
-          });
-        }
+          },
+          update: {
+            quantity: { increment: guestItem.quantity },
+          },
+          create: {
+            id: nanoid(),
+            cartId: cart.id,
+            productId: guestItem.productId,
+            quantity: guestItem.quantity,
+          },
+        });
       }
 
       // 4. Update Idempotency Key (Last Sync ID)

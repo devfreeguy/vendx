@@ -1,6 +1,5 @@
 generator client {
-    provider        = "prisma-client-js"
-    previewFeatures = ["driverAdapters"]
+    provider = "prisma-client-js"
 }
 
 datasource db {
@@ -84,6 +83,8 @@ model CartItem {
     productId String
     product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
     quantity  Int
+
+    @@unique([cartId, productId])
 }
 
 model Order {

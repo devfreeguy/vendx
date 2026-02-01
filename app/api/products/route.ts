@@ -11,8 +11,24 @@ export async function GET(req: Request) {
   const page = parseInt(searchParams.get("page") || "1");
   const limit = parseInt(searchParams.get("limit") || "20");
   const search = searchParams.get("search") || "";
+  const category = searchParams.get("category");
+  const subCategory = searchParams.get("subCategory");
+  const vendorId = searchParams.get("vendorId");
+  const minPrice = searchParams.get("minPrice");
+  const maxPrice = searchParams.get("maxPrice");
 
   const where: any = {};
+
+  if (category) where.category = category;
+  if (subCategory) where.subCategory = subCategory;
+  if (vendorId) where.vendorId = vendorId;
+
+  if (minPrice || maxPrice) {
+    where.price = {};
+    if (minPrice) where.price.gte = parseFloat(minPrice);
+    if (maxPrice) where.price.lte = parseFloat(maxPrice);
+  }
+
   if (search) {
     where.OR = [
       { title: { contains: search, mode: "insensitive" } },
