@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { getSession } from "@/lib/auth";
 import { createErrorResponse } from "@/lib/api-error";
 import { z } from "zod";
@@ -95,7 +96,7 @@ export async function PATCH(req: Request) {
       return createErrorResponse("User not found", 404, "NOT_FOUND");
     }
 
-    const dataToUpdate: any = {};
+    const dataToUpdate: Prisma.UserUpdateInput = {};
 
     if (name) {
       dataToUpdate.name = name;

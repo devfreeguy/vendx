@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { getSession } from "@/lib/auth";
 import { z } from "zod";
 import { nanoid } from "nanoid";
@@ -17,10 +18,10 @@ export async function GET(req: Request) {
   const minPrice = searchParams.get("minPrice");
   const maxPrice = searchParams.get("maxPrice");
 
-  const where: any = {};
+  const where: Prisma.ProductWhereInput = {};
 
   if (category) where.category = category;
-  if (subCategory) where.subCategory = subCategory;
+  if (subCategory) where.subcategory = subCategory;
   if (vendorId) where.vendorId = vendorId;
 
   if (minPrice || maxPrice) {
