@@ -1,16 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { Prisma as PrismaClient } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { getSession } from "@/lib/auth";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { createErrorResponse } from "@/lib/api-error";
 import { syncCartSchema } from "@/lib/schemas";
 
-// Extend schema locally if syncId not in core schema yet, or assuming client sends it.
-// Ideally usage: { items: [...], syncId: "..." }
+// Extend schema locally if syncId not in core schema yet
 const idempotentSyncSchema = syncCartSchema.extend({
-  syncId: z.string().optional(), // Optional for backward compatibility, but required for idempotency
+  syncId: z.string().optional(),
 });
 
 export async function POST(req: Request) {
@@ -24,15 +23,15 @@ export async function POST(req: Request) {
     const { items, syncId } = idempotentSyncSchema.parse(body);
     const userId = session.userId as string;
 
-    // Use transaction for atomicity and strict consistency
     const result = await prisma.$transaction(
-      async (tx: PrismaClient.TransactionClient) => {
-        // 1. Idempotency Check
-        const user = await tx.user.findUnique({ where: { id: userId } });
+      async (tx: Prisma.TransactionClient) => {
+        // 1. Idempotency check
+        const user = await tx.user.findUnique({
+          where: { id: userId },
+        });
 
-        // If syncId is provided and matches, return current cart without merging
         if (syncId && user?.lastCartSyncId === syncId) {
-          return await tx.cart.findUnique({
+          return tx.cart.findUnique({
             where: { userId },
             include: {
               items: {
@@ -42,7 +41,7 @@ export async function POST(req: Request) {
           });
         }
 
-        // 2. Fetch/Create Server Cart
+        // 2. Fetch or create cart
         let cart = await tx.cart.findUnique({
           where: { userId },
           include: { items: true },
@@ -58,17 +57,12 @@ export async function POST(req: Request) {
           });
         }
 
-        // 3. Merge Logic
-        // Strategy: Additive Merge.
-        // If item in server map -> add quantity.
-        // If item new -> create.
-
-        // We process items one by one. Optimally could batch finds, but loop is cleaner for logic.
+        // 3. Merge logic
         for (const guestItem of items) {
-          // Validate product exists (optional but good for data integrity)
           const product = await tx.product.findUnique({
             where: { id: guestItem.productId },
           });
+
           if (!product) continue;
 
           await tx.cartItem.upsert({
@@ -90,7 +84,7 @@ export async function POST(req: Request) {
           });
         }
 
-        // 4. Update Idempotency Key (Last Sync ID)
+        // 4. Update idempotency key
         if (syncId) {
           await tx.user.update({
             where: { id: userId },
@@ -98,15 +92,17 @@ export async function POST(req: Request) {
           });
         }
 
-        // 5. Return Final Cart State
-        return await tx.cart.findUnique({
+        // 5. Return final cart state
+        return tx.cart.findUnique({
           where: { userId },
           include: {
             items: {
               include: {
                 product: {
                   include: {
-                    vendor: { select: { id: true, name: true, email: true } },
+                    vendor: {
+                      select: { id: true, name: true, email: true },
+                    },
                   },
                 },
               },
