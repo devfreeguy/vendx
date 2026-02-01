@@ -150,7 +150,7 @@ export async function PATCH(req: Request) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return createErrorResponse(
-        error.errors[0].message,
+        error.issues[0]?.message || "Validation failed",
         400,
         "VALIDATION_ERROR",
       );

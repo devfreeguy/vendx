@@ -47,7 +47,7 @@ export async function DELETE(
       }
 
       // 2. Delete Product Images
-      vendorProducts.forEach((product) => {
+      vendorProducts.forEach((product: { images: string[] }) => {
         if (product.images && product.images.length > 0) {
           product.images.forEach((img) => {
             const publicId = getPublicIdFromUrl(img);
