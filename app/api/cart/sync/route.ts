@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
+import { Prisma as PrismaClient } from "@prisma/client";
 import { getSession } from "@/lib/auth";
 import { nanoid } from "nanoid";
 import { z } from "zod";
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
 
     // Use transaction for atomicity and strict consistency
     const result = await prisma.$transaction(
-      async (tx: Prisma.TransactionClient) => {
+      async (tx: PrismaClient.TransactionClient) => {
         // 1. Idempotency Check
         const user = await tx.user.findUnique({ where: { id: userId } });
 
