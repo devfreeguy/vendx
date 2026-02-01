@@ -3,6 +3,8 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useCartStore } from "@/hooks/useCartStore";
+import { useAuthStore } from "@/store/useAuthStore";
 import {
   Heart,
   Minus,
@@ -11,13 +13,10 @@ import {
   ShieldCheck,
   ShoppingBag,
   Star,
-  Truck,
+  Truck
 } from "lucide-react";
 import { useState } from "react";
 import { VendorBadge } from "./VendorBadge";
-
-import { useCartStore } from "@/hooks/useCartStore";
-import { useAuthStore } from "@/store/useAuthStore";
 
 interface ProductInfoProps {
   id?: string;

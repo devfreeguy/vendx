@@ -48,11 +48,16 @@ export default function OrderPage() {
 
   const copyToClipboard = () => {
     if (order?.bchAddress) {
-      navigator.clipboard.writeText(order.bchAddress);
+      navigator.clipboard.writeText(getBchPayableAddress());
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
   };
+
+  function getBchPayableAddress(){
+    // This strip off the `bitcoincash:` prefix from the bchAddress
+    return order?.bchAddress.split(":")[1];
+  }
 
   if (loading)
     return (
@@ -79,8 +84,8 @@ export default function OrderPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <main className="flex-1 pt-24 pb-12 container mx-auto px-4 max-w-3xl">
-        <Card className="text-center py-8 border-border/60 shadow-md">
+      <main className="min-h-dvh flex flex-1 pt-24 pb-12 container mx-auto px-4 max-w-3xl items-center justify-center">
+        <Card className="w-full text-center py-8 border-border/60 shadow-md">
           <CardHeader>
             <CardTitle className="text-2xl">
               {order.status === "PENDING"
@@ -124,7 +129,7 @@ export default function OrderPage() {
                 <div className="space-y-4 w-full max-w-md">
                   <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-xl border border-border/50 font-mono text-sm break-all text-left group hover:border-primary/30 transition-colors">
                     <span className="flex-1 text-muted-foreground group-hover:text-foreground transition-colors">
-                      {order.bchAddress}
+                      {getBchPayableAddress()}
                     </span>
                     <Button
                       size="icon"
