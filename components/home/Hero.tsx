@@ -9,7 +9,7 @@ export function Hero() {
       <HeroBackground />
 
       {/* Main Content */}
-      <div className="container mx-auto px-6 relative z-10 text-center pt-20">
+      <div className="container mx-auto px-6 relative z-10 text-center pt-10">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-muted border border-border mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
