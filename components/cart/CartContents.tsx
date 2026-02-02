@@ -25,9 +25,20 @@ export function CartContents() {
   }, [isAuthenticated]);
 
   const subtotal = items.reduce(
+    (sum, item) => sum + (item.discountPrice || item.price) * item.quantity,
+    0,
+  );
+
+  const totalOriginalPrice = items.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0,
   );
+
+  const totalSavings = totalOriginalPrice - subtotal;
+  const savingsPercentage =
+    totalOriginalPrice > 0
+      ? Math.round((totalSavings / totalOriginalPrice) * 100)
+      : 0;
 
   if (items.length === 0 && !isAuthenticated) {
     return (
@@ -131,7 +142,10 @@ export function CartContents() {
                     </button>
                   </div>
                   <span className="text-sm font-semibold">
-                    ${(item.price * item.quantity).toLocaleString()}
+                    $
+                    {(
+                      (item.discountPrice || item.price) * item.quantity
+                    ).toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -147,11 +161,19 @@ export function CartContents() {
       </ScrollArea>
 
       <div className="p-4 border-t border-border bg-background space-y-4">
+        {totalSavings > 0 && (
+          <div className="bg-green-500/10 border border-green-500/20 text-green-600 rounded-lg p-3 text-sm text-center font-medium">
+            You're saving ${totalSavings.toLocaleString()} ({savingsPercentage}
+            %) on this order!
+          </div>
+        )}
+
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Subtotal</span>
             <span className="font-semibold">${subtotal.toLocaleString()}</span>
           </div>
+
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Shipping</span>
             <span className="text-muted-foreground">

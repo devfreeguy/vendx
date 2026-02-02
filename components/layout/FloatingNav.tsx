@@ -2,7 +2,7 @@
 
 import { useAuthStore } from "@/store/useAuthStore";
 import { useCartStore } from "@/hooks/useCartStore";
-import { Home, LayoutGrid, ShoppingCart, User } from "lucide-react";
+import { Home, LayoutGrid, Package2, ShoppingCart, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -60,6 +60,11 @@ export function FloatingNav() {
       icon: ShoppingCart,
       href: "/cart",
       badge: itemCount,
+    },
+    {
+      label: "Orders",
+      icon: Package2,
+      href: "/orders",
     },
     {
       label: user ? "Account" : "Login",

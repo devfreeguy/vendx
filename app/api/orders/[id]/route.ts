@@ -1,7 +1,9 @@
+// app/api/orders/[id]/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { createErrorResponse } from "@/lib/api-error";
+import { BchMonitorServiceAPI } from "@/lib/bch/monitor-api";
 
 export async function GET(
   req: Request,
@@ -33,19 +35,71 @@ export async function GET(
       return createErrorResponse("Forbidden", 403, "FORBIDDEN");
     }
 
+    // ONLY check blockchain if status is PENDING
+    if (order.status === "PENDING" && order.bchAddress) {
+      const monitor = new BchMonitorServiceAPI();
+
+      try {
+        // Strict 12-second timeout for the entire check
+        await Promise.race([
+          (async () => {
+            await monitor.checkAddressForTransactions(
+              order.bchAddress,
+              order.id,
+            );
+            await monitor.checkConfirmations(order.id);
+          })(),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Payment check timeout")), 12000),
+          ),
+        ]);
+      } catch (err: any) {
+        // Log but don't fail the request
+        console.error("⚠️ Payment monitoring error:", err.message);
+      } finally {
+        // Always disconnect
+        try {
+          await monitor.disconnect();
+        } catch (disconnectErr) {
+          console.error("Disconnect error:", disconnectErr);
+        }
+      }
+    }
+
+    // Reload order to get potentially updated status
+    const updatedOrder = await prisma.order.findUnique({
+      where: { id },
+      include: {
+        items: {
+          include: {
+            product: { select: { title: true, vendorId: true } },
+          },
+        },
+        transactions: {
+          select: {
+            status: true,
+            type: true,
+          },
+        },
+      },
+    });
+
+    if (!updatedOrder) {
+      return createErrorResponse("Order not found", 404, "NOT_FOUND");
+    }
+
     // Lazy Expiration Check
     if (
-      order.status === "PENDING" &&
-      new Date() > new Date(order.rateExpiresAt)
+      updatedOrder.status === "PENDING" &&
+      new Date() > new Date(updatedOrder.rateExpiresAt)
     ) {
-      // Check for pending transactions before expiring
       const tx = await prisma.transaction.findFirst({
-        where: { orderId: order.id },
+        where: { orderId: updatedOrder.id },
       });
 
       if (!tx) {
-        const updatedOrder = await prisma.order.update({
-          where: { id: order.id },
+        const expiredOrder = await prisma.order.update({
+          where: { id: updatedOrder.id },
           data: { status: "EXPIRED" },
           include: {
             items: {
@@ -55,11 +109,18 @@ export async function GET(
             },
           },
         });
-        return NextResponse.json({ success: true, data: updatedOrder });
+        return NextResponse.json({ success: true, data: expiredOrder });
       }
     }
 
-    return NextResponse.json({ success: true, data: order });
+    const paymentDetected = updatedOrder.transactions.some(
+      (t) => t.type === "PAYMENT" && t.status === "PENDING",
+    );
+
+    return NextResponse.json({
+      success: true,
+      data: { ...updatedOrder, paymentDetected },
+    });
   } catch (error) {
     console.error("GET /api/orders/[id] error:", error);
     return createErrorResponse(

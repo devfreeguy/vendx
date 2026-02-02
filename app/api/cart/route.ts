@@ -23,6 +23,7 @@ export async function GET(req: Request) {
                 id: true,
                 title: true,
                 price: true,
+                discountPrice: true,
                 stock: true,
                 images: true,
                 vendor: { select: { id: true, email: true, name: true } },

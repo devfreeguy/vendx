@@ -89,6 +89,13 @@ export async function POST(req: Request) {
     const body = await req.json();
     const validated = productSchema.parse(body);
 
+    // Ensure 2 decimal precision (e.g. 10.123 -> 10.12)
+    if (validated.price)
+      validated.price = Math.round(validated.price * 100) / 100;
+    if (validated.discountPrice) {
+      validated.discountPrice = Math.round(validated.discountPrice * 100) / 100;
+    }
+
     const product = await prisma.product.create({
       data: {
         id: nanoid(),

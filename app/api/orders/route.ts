@@ -47,7 +47,8 @@ export async function POST(req: Request) {
           "INSUFFICIENT_STOCK",
         );
       }
-      totalAmount += product.price * item.quantity;
+      const price = product.discountPrice ?? product.price;
+      totalAmount += price * item.quantity;
     }
 
     // Calculate real BCH quote
@@ -84,12 +85,15 @@ export async function POST(req: Request) {
           shippingAddress: shippingAddress as any,
           status: "PENDING",
           items: {
-            create: items.map((item) => ({
-              id: nanoid(),
-              productId: item.productId,
-              quantity: item.quantity,
-              priceAtPurchase: productsMap.get(item.productId)!.price,
-            })),
+            create: items.map((item) => {
+              const product = productsMap.get(item.productId)!;
+              return {
+                id: nanoid(),
+                productId: item.productId,
+                quantity: item.quantity,
+                priceAtPurchase: product.discountPrice ?? product.price,
+              };
+            }),
           },
         },
       });

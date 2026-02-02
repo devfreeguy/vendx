@@ -20,6 +20,7 @@ export class ApiError extends Error {
 // Axios Instance
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "/api",
+  timeout: 15000, // 15 second timeout
   headers: {
     "Content-Type": "application/json",
   },

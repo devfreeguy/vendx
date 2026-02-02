@@ -65,23 +65,35 @@ export async function POST(req: Request) {
 
           if (!product) continue;
 
-          await tx.cartItem.upsert({
-            where: {
-              cartId_productId: {
+          const existingItem = cart.items.find(
+            (item) => item.productId === guestItem.productId,
+          );
+
+          if (existingItem) {
+            // Item already exists - just keep the existing quantity
+            // Don't add or use Math.max, as this sync likely already happened
+            await tx.cartItem.update({
+              where: {
+                cartId_productId: {
+                  cartId: cart.id,
+                  productId: guestItem.productId,
+                },
+              },
+              data: {
+                quantity: existingItem.quantity, // Keep existing, don't merge
+              },
+            });
+          } else {
+            // New item - add it
+            await tx.cartItem.create({
+              data: {
+                id: nanoid(),
                 cartId: cart.id,
                 productId: guestItem.productId,
+                quantity: guestItem.quantity,
               },
-            },
-            update: {
-              quantity: { increment: guestItem.quantity },
-            },
-            create: {
-              id: nanoid(),
-              cartId: cart.id,
-              productId: guestItem.productId,
-              quantity: guestItem.quantity,
-            },
-          });
+            });
+          }
         }
 
         // 4. Update idempotency key

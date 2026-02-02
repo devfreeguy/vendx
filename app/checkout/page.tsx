@@ -55,7 +55,7 @@ export default function CheckoutPage() {
   });
 
   const subtotal = items.reduce(
-    (sum, item) => sum + item.price * item.quantity,
+    (sum, item) => sum + (item.discountPrice || item.price) * item.quantity,
     0,
   );
 
@@ -189,7 +189,7 @@ export default function CheckoutPage() {
       <main className="flex-1 pt-24 pb-12 w-full max-w-4xl mx-auto px-4">
         <h1 className="text-3xl font-bold mb-8">Checkout</h1>
 
-        <div className="grid gap-8 md:grid-cols-2">
+        <div className="grid gap-8 md:grid-cols-2 md">
           <div className="space-y-6">
             <Card>
               <CardHeader>
@@ -359,7 +359,10 @@ export default function CheckoutPage() {
                         {item.title} x {item.quantity}
                       </span>
                       <span>
-                        ${(item.price * item.quantity).toLocaleString()}
+                        $
+                        {(
+                          (item.discountPrice || item.price) * item.quantity
+                        ).toLocaleString()}
                       </span>
                     </div>
                   ))}

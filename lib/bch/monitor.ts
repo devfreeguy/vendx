@@ -1,120 +1,232 @@
-// Basic implementation of a BCH monitoring service using electrum-cash
-// In a production Next.js app, this would typically run as a separate worker process or
-// essentially scheduled via cron, or using a long-running custom server.
-// Since Next.js is serverless-first, we might need an API route triggered by cron to "sync"
-// or use a real-time websocket connection if custom server is used.
-//
-// For this task, I'll create a class that can be initialized to listen or poll.
-// Given strict Next.js/Vercel environments often kill long-running processes,
-// a polling mechanism triggered by client or periodic cron is safer,
-// OR we assume a custom server setup.
-// However, the prompt asks to "Implement a blockchain monitoring service".
-// Let's build a service class that *could* be run standalone or invoked.
-
-import {
-  ElectrumCluster,
-  ElectrumTransport,
-  RequestResponse,
-} from "electrum-cash";
 import { prisma } from "@/lib/prisma";
-import { TransactionType, TransactionStatus } from "@prisma/client";
+import { TransactionStatus } from "@prisma/client";
+import { ElectrumCluster, ElectrumTransport } from "electrum-cash";
+import { nanoid } from "nanoid";
+
+interface ElectrumTransaction {
+  confirmations?: number;
+  blockhash?: string;
+  blocktime?: number;
+  txid: string;
+  hash: string;
+  version: number;
+  size: number;
+  vsize: number;
+  weight: number;
+  locktime: number;
+  vin: any[];
+  vout: Array<{
+    value: number;
+    n: number;
+    scriptPubKey: {
+      asm: string;
+      hex: string;
+      type: string;
+      addresses?: string[];
+    };
+  }>;
+}
+
+interface ElectrumHistoryItem {
+  height: number;
+  tx_hash: string;
+  fee?: number;
+}
+
+interface TransactionMetadata {
+  blockHeight: number;
+  confirmedAt: Date | null;
+  isSufficient: boolean;
+  isOverpaid: boolean;
+  confirmations?: number;
+}
+
+// Type guard function for runtime validation
+function isTransactionMetadata(value: unknown): value is TransactionMetadata {
+  if (!value || typeof value !== "object") return false;
+  const obj = value as any;
+  return (
+    typeof obj.blockHeight === "number" &&
+    typeof obj.isSufficient === "boolean" &&
+    typeof obj.isOverpaid === "boolean" &&
+    (obj.confirmedAt === null ||
+      obj.confirmedAt instanceof Date ||
+      typeof obj.confirmedAt === "string")
+  );
+}
 
 export class BchMonitorService {
   private electrum: any;
   private isConnected: boolean = false;
+  private connectionTimeout: number = 8000; // 8 seconds
 
   constructor() {
     // Initialize Electrum Cluster with reputable servers
     this.electrum = new ElectrumCluster("VendX-Monitor", "1.4.1", 1, 1);
 
-    // Add some default servers
+    // Add multiple backup servers for redundancy
+    // this.electrum.addServer(
+    //   "bch.imaginary.cash",
+    //   50004,
+    //   ElectrumTransport.WSS.Scheme,
+    //   false,
+    // );
+    // this.electrum.addServer(
+    //   "electroncash.de",
+    //   50004,
+    //   ElectrumTransport.WSS.Scheme,
+    //   false,
+    // );
+    // this.electrum.addServer(
+    //   "bch0.kister.net",
+    //   50004,
+    //   ElectrumTransport.WSS.Scheme,
+    //   false,
+    // );
+
+    // Use TCP (more reliable for server-side)
     this.electrum.addServer(
-      "bch.imaginary.cash",
-      50004,
-      ElectrumTransport.WSS.Scheme,
+      "electroncash.de",
+      ElectrumTransport.TCP.Port,
+      ElectrumTransport.TCP.Scheme,
       false,
     );
     this.electrum.addServer(
-      "electrum.imaginary.cash",
-      50004,
-      ElectrumTransport.WSS.Scheme,
+      "bch.loping.net",
+      ElectrumTransport.TCP.Port,
+      ElectrumTransport.TCP.Scheme,
       false,
     );
   }
 
   async connect() {
     if (this.isConnected) return;
+
     try {
-      await this.electrum.ready(); // Wait for connections
+      // Add timeout to connection attempt
+      await Promise.race([
+        this.electrum.ready(),
+        new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error("Connection timeout")),
+            this.connectionTimeout,
+          ),
+        ),
+      ]);
+
       this.isConnected = true;
-      console.log("Connected to BCH Electrum servers");
+      console.log("✅ Connected to BCH Electrum servers");
     } catch (error) {
-      console.error("Failed to connect to Electrum servers:", error);
+      console.error("❌ Failed to connect to Electrum servers:", error);
+      this.isConnected = false;
       throw error;
     }
   }
 
   async disconnect() {
-    await this.electrum.shutdown();
-    this.isConnected = false;
+    try {
+      if (this.isConnected) {
+        await this.electrum.shutdown();
+        this.isConnected = false;
+        console.log("🔌 Disconnected from Electrum servers");
+      }
+    } catch (error) {
+      console.error("Error disconnecting:", error);
+    }
+  }
+
+  // Wrap all operations with timeout
+  private async withTimeout<T>(
+    promise: Promise<T>,
+    timeoutMs: number = 5000,
+    errorMessage: string = "Operation timed out",
+  ): Promise<T> {
+    return Promise.race([
+      promise,
+      new Promise<T>((_, reject) =>
+        setTimeout(() => reject(new Error(errorMessage)), timeoutMs),
+      ),
+    ]);
+  }
+
+  // Retry logic with exponential backoff
+  private async withRetry<T>(
+    operation: () => Promise<T>,
+    maxRetries: number = 3,
+    baseDelay: number = 1000,
+  ): Promise<T> {
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        return await operation();
+      } catch (error) {
+        if (i === maxRetries - 1) throw error;
+        const delay = baseDelay * Math.pow(2, i);
+        console.log(`Retry ${i + 1}/${maxRetries} after ${delay}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+    throw new Error("Max retries exceeded");
   }
 
   // Check a specific address for new transactions (Polling approach)
-  // This is payload-safe for Next.js API routes (stateless)
   async checkAddressForTransactions(address: string, orderId: string) {
-    if (!this.isConnected) await this.connect();
+    try {
+      if (!this.isConnected) {
+        await this.connect();
+      }
 
-    // 1. Get address history (tx hashes)
-    // Electrum expects scripthash, so we need to convert address -> scripthash.
-    // We need a helper for that.
-    const scripthash = await this.addressToScriptHash(address);
+      const scripthash = await this.withTimeout(
+        this.addressToScriptHash(address),
+        3000,
+        "Address conversion timeout",
+      );
 
-    const history = await this.electrum.request(
-      "blockchain.scripthash.get_history",
-      scripthash,
-    );
+      const history = (await this.withTimeout(
+        this.electrum.request("blockchain.scripthash.get_history", scripthash),
+        5000,
+        "Get history timeout",
+      )) as ElectrumHistoryItem[];
 
-    if (Array.isArray(history)) {
-      for (const txData of history) {
-        // txData structure: { height: number, tx_hash: string }
-        // If height <= 0, it's unconfirmed (mempool)
+      if (Array.isArray(history)) {
+        for (const txData of history) {
+          const existingTx = await prisma.transaction.findFirst({
+            where: { txHash: txData.tx_hash },
+          });
 
-        // Allow 0-conf detection? Task says "confirmed only after >=1", but we capture here.
+          if (existingTx) continue;
 
-        // Check if we already processed this tx
-        const existingTx = await prisma.transaction.findFirst({
-          where: { txHash: txData.tx_hash },
-        });
+          const txDetails = (await this.withTimeout(
+            this.electrum.request(
+              "blockchain.transaction.get",
+              txData.tx_hash,
+              true,
+            ),
+            5000,
+            "Get transaction timeout",
+          )) as ElectrumTransaction;
 
-        if (existingTx) continue;
-
-        // Fetch full transaction details to get amount
-        const txDetails = await this.electrum.request(
-          "blockchain.transaction.get",
-          txData.tx_hash,
-          true,
-        );
-
-        // Parse outputs to find amount sent to our address
-        // Note: Electrum 'verbose=true' returns detailed JSON
-        const amountReceived = this.parseTxAmountForAddress(txDetails, address);
-
-        if (amountReceived > 0) {
-          await this.recordTransaction(
-            orderId,
-            txData.tx_hash,
-            amountReceived,
-            txData.height,
+          const amountReceived = this.parseTxAmountForAddress(
+            txDetails,
+            address,
           );
+
+          if (amountReceived > 0) {
+            await this.recordTransaction(
+              orderId,
+              txData.tx_hash,
+              amountReceived,
+              txData.height,
+            );
+          }
         }
       }
+    } catch (error) {
+      console.error(`Error checking transactions for ${address}:`, error);
+      throw error;
     }
   }
 
   private async addressToScriptHash(address: string): Promise<string> {
-    // We need 'bitcoincashjs-lib' or 'bchaddrjs' to decode address to script
-    // Then hash with sha256 and reverse bytes.
-    // Importing locally to avoid top-level issues if modules missing in some envs
     const bitcoin = require("bitcoincashjs-lib");
     const bchaddr = require("bchaddrjs");
     const crypto = require("crypto");
@@ -124,7 +236,7 @@ export class BchMonitorService {
     const script = bitcoin.address.toOutputScript(
       legacyAddr,
       bitcoin.networks.bitcoin,
-    ); // verify network match
+    );
 
     const hash = crypto.createHash("sha256").update(script).digest();
     // Reverse buffer for Electrum scripthash
@@ -132,22 +244,14 @@ export class BchMonitorService {
   }
 
   private parseTxAmountForAddress(
-    txDetails: any,
+    txDetails: ElectrumTransaction,
     targetAddress: string,
   ): number {
-    // bitcoincashjs-lib might be needed to decode output scripts if raw
-    // But verbose electrum response usually has "scriptPubKey": { "addresses": [...] }
-
     let total = 0;
     if (txDetails && txDetails.vout) {
       for (const output of txDetails.vout) {
-        // Standard verbose output has scriptPubKey.addresses
         if (output.scriptPubKey && output.scriptPubKey.addresses) {
-          // Normalize addresses for comparison
           const addresses = output.scriptPubKey.addresses;
-          // targetAddress might be CashAddr, response might be Legacy or CashAddr
-
-          // Use a fuzzy check or normalize both to CashAddr
           const bchaddr = require("bchaddrjs");
           const targetCash = bchaddr.toCashAddress(targetAddress);
 
@@ -160,7 +264,7 @@ export class BchMonitorService {
           });
 
           if (match) {
-            total += output.value; // Value is usually in BCH (e.g. 0.005)
+            total += output.value;
           }
         }
       }
@@ -174,8 +278,8 @@ export class BchMonitorService {
     amount: number,
     height: number,
   ) {
-    // 0 height usually means mempool (unconfirmed)
-    const status = height > 0 ? "CONFIRMED" : "PENDING";
+    // FIX: Properly type the status variable
+    const status: TransactionStatus = height > 0 ? "CONFIRMED" : "PENDING";
 
     // Fetch order to validate amount
     const order = await prisma.order.findUnique({
@@ -188,29 +292,28 @@ export class BchMonitorService {
     }
 
     // Verify amount matches or exceeds expected BCH
-    // Allow small epsilon for float precision? standard is exact or greater.
-    // Verify amount matches or exceeds expected BCH
-    // Allow small epsilon for float precision? standard is exact or greater.
-    // 0.00000001 is 1 satoshi.
-    const epsilon = 0.00000001;
+    const epsilon = 0.00000001; // 1 satoshi
     const isSufficient = amount >= order.bchAmount - epsilon;
     const isOverpaid = amount > order.bchAmount + epsilon;
 
+    // FIX: Properly typed metadata
+    const metadata: TransactionMetadata = {
+      blockHeight: height,
+      confirmedAt: height > 0 ? new Date() : null,
+      isSufficient,
+      isOverpaid,
+    };
+
     // Create transaction record
-    const tx = await prisma.transaction.create({
+    await prisma.transaction.create({
       data: {
         orderId,
         txHash,
         amount,
         currency: "BCH",
         type: "PAYMENT",
-        status: status as TransactionStatus,
-        metadata: {
-          blockHeight: height,
-          confirmedAt: height > 0 ? new Date() : null,
-          isSufficient,
-          isOverpaid,
-        },
+        status,
+        metadata: metadata as any, // Prisma Json type
       },
     });
 
@@ -229,117 +332,133 @@ export class BchMonitorService {
         data: { status: "UNDERPAID" },
       });
     } else {
-      // PAID (Pending Confirmation)
-      // We usually wait for 1 conf to mark PAID, but we can mark as "Processing" or check logic in checkConfirmations.
-      // Task 4.2 says "Mark order as DETECTED only if all checks pass".
-      // Task 5.1 says "Transition order status from DETECTED to CONFIRMED".
-      // My previous logic in checkConfirmations handles the transition to PAID.
-      // Here we just acknowledge validity.
-
+      // Handle overpayment
       if (isOverpaid) {
         const excess = amount - order.bchAmount;
         console.log(
           `Overpayment detected for order ${orderId}: ${excess} BCH excess.`,
         );
 
-        // Credit excess to wallet
-        const wallet = await prisma.wallet.findUnique({
+        // FIX: Auto-create wallet if it doesn't exist
+        let wallet = await prisma.wallet.findUnique({
           where: { userId: order.buyerId },
         });
-        if (wallet) {
-          // Upsert balance
-          await prisma.balance.upsert({
-            where: {
-              walletId_currency: {
-                walletId: wallet.id,
-                currency: "BCH",
-              },
-            },
-            update: {
-              amount: { increment: excess },
-            },
-            create: {
-              walletId: wallet.id,
-              currency: "BCH",
-              amount: excess,
+
+        if (!wallet) {
+          wallet = await prisma.wallet.create({
+            data: {
+              id: nanoid(),
+              userId: order.buyerId,
             },
           });
-          console.log(`Credited ${excess} BCH to wallet ${wallet.id}`);
-        } else {
-          console.warn(
-            `No wallet found for user ${order.buyerId} to credit excess.`,
-          );
-          // Create wallet? Or just log.
+          console.log(`Created wallet ${wallet.id} for user ${order.buyerId}`);
         }
+
+        // Credit excess to wallet
+        await prisma.balance.upsert({
+          where: {
+            walletId_currency: {
+              walletId: wallet.id,
+              currency: "BCH",
+            },
+          },
+          update: {
+            amount: { increment: excess },
+          },
+          create: {
+            walletId: wallet.id,
+            currency: "BCH",
+            amount: excess,
+          },
+        });
+        console.log(`Credited ${excess} BCH to wallet ${wallet.id}`);
       }
     }
   }
 
   async checkConfirmations(orderId: string) {
-    if (!this.isConnected) await this.connect();
+    try {
+      if (!this.isConnected) {
+        await this.connect();
+      }
 
-    const transaction = await prisma.transaction.findFirst({
-      where: { orderId, type: "PAYMENT" },
-      orderBy: { createdAt: "desc" },
-    });
+      const transaction = await prisma.transaction.findFirst({
+        where: { orderId, type: "PAYMENT" },
+        orderBy: { createdAt: "desc" },
+      });
 
-    if (!transaction || !transaction.txHash) return;
+      if (!transaction || !transaction.txHash) return;
 
-    // If already confirmed and we haven't marked order as PAID (if logic handled elsewhere), we might be done.
-    // BUT we need to ensure Order Status reflects this.
+      const txData = (await this.withTimeout(
+        this.electrum.request(
+          "blockchain.transaction.get",
+          transaction.txHash,
+          true,
+        ),
+        5000,
+        "Get transaction confirmation timeout",
+      )) as ElectrumTransaction;
 
-    // Check current status from blockchain
-    const txData = await this.electrum.request(
-      "blockchain.transaction.get",
-      transaction.txHash,
-      true,
-    );
+      const confirmations = txData.confirmations || 0;
 
-    // Determine confirmations
-    // verbose txData typically doesn't directly give confirmations unless blockhash is present.
-    // We can assume if it's in a block (confirmations > 0), it's confirmed.
-    // Electrum verbose response usually has 'confirmations' field if in block.
+      if (confirmations >= 1) {
+        if (transaction.status !== "CONFIRMED") {
+          // FIX: Use type guard for safe metadata access
+          const existingMetadata = isTransactionMetadata(transaction.metadata)
+            ? transaction.metadata
+            : ({} as TransactionMetadata);
 
-    const confirmations = txData.confirmations || 0;
-
-    if (confirmations >= 1) {
-      // Transition to CONFIRMED / PAID
-      if (transaction.status !== "CONFIRMED") {
-        await prisma.transaction.update({
-          where: { id: transaction.id },
-          data: {
-            status: "CONFIRMED",
-            metadata: {
-              ...((transaction.metadata as object) || {}),
-              confirmations,
-              confirmedAt: new Date(),
+          await prisma.transaction.update({
+            where: { id: transaction.id },
+            data: {
+              status: "CONFIRMED",
+              metadata: {
+                ...existingMetadata,
+                confirmations,
+                confirmedAt: new Date(),
+              } as any,
             },
-          },
-        });
-      }
-
-      // Finalize Order if sufficient
-      const meta = transaction.metadata as any;
-      if (meta && meta.isSufficient) {
-        const order = await prisma.order.findUnique({ where: { id: orderId } });
-        if (order && order.status !== "PAID" && order.status !== "COMPLETED") {
-          await prisma.order.update({
-            where: { id: orderId },
-            data: { status: "PAID" },
           });
-          console.log(
-            `Order ${orderId} finalized (PAID) with ${confirmations} confirmations.`,
-          );
         }
+
+        // FIX: Use type guard for safe checking
+        if (
+          isTransactionMetadata(transaction.metadata) &&
+          transaction.metadata.isSufficient === true
+        ) {
+          const order = await prisma.order.findUnique({
+            where: { id: orderId },
+          });
+
+          if (
+            order &&
+            order.status !== "PAID" &&
+            order.status !== "COMPLETED"
+          ) {
+            await prisma.order.update({
+              where: { id: orderId },
+              data: { status: "PAID" },
+            });
+            console.log(
+              `Order ${orderId} finalized (PAID) with ${confirmations} confirmations.`,
+            );
+          }
+        }
+      } else {
+        console.log(
+          `Order ${orderId} tx ${transaction.txHash} has ${confirmations} confirmations.`,
+        );
       }
-    } else {
-      // Still pending
-      console.log(
-        `Order ${orderId} tx ${transaction.txHash} has ${confirmations} confirmations.`,
+    } catch (error) {
+      console.error(
+        `Error checking confirmations for order ${orderId}:`,
+        error,
       );
+      throw error;
     }
   }
 
+  // FIX: Implement stock return for expired orders
   async checkExpiredOrders() {
     const now = new Date();
 
@@ -347,6 +466,9 @@ export class BchMonitorService {
       where: {
         status: "PENDING",
         rateExpiresAt: { lt: now },
+      },
+      include: {
+        items: true,
       },
     });
 
@@ -357,14 +479,33 @@ export class BchMonitorService {
       });
 
       if (!tx) {
-        await prisma.order.update({
-          where: { id: order.id },
-          data: { status: "EXPIRED" },
-        });
-        console.log(`Order ${order.id} marked as EXPIRED.`);
+        try {
+          // Use transaction to ensure atomicity
+          await prisma.$transaction(async (tx) => {
+            // Return stock to products
+            for (const item of order.items) {
+              await tx.product.update({
+                where: { id: item.productId },
+                data: { stock: { increment: item.quantity } },
+              });
+            }
 
-        // Ideally return stock here
-        // ...
+            // Mark order as expired
+            await tx.order.update({
+              where: { id: order.id },
+              data: { status: "EXPIRED" },
+            });
+          });
+
+          console.log(
+            `✅ Order ${order.id} marked as EXPIRED and stock returned.`,
+          );
+        } catch (error) {
+          console.error(
+            `❌ Failed to expire order ${order.id} and return stock:`,
+            error,
+          );
+        }
       }
     }
   }

@@ -13,7 +13,7 @@ import {
   ShieldCheck,
   ShoppingBag,
   Star,
-  Truck
+  Truck,
 } from "lucide-react";
 import { useState } from "react";
 import { VendorBadge } from "./VendorBadge";
@@ -61,7 +61,8 @@ export function ProductInfo({
     addItem({
       id,
       title,
-      price: discountPrice && discountPrice < price ? discountPrice : price,
+      price: price,
+      discountPrice: discountPrice,
       image: images[0] || "",
       vendor: { name: vendor.name },
     });

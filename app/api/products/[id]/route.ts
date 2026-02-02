@@ -64,6 +64,17 @@ export async function PATCH(
     const body = await req.json();
     const validated = updateProductSchema.parse(body);
 
+    // Ensure 2 decimal precision provided values
+    if (validated.price !== undefined) {
+      validated.price = Math.round(validated.price * 100) / 100;
+    }
+    if (
+      validated.discountPrice !== undefined &&
+      validated.discountPrice !== null
+    ) {
+      validated.discountPrice = Math.round(validated.discountPrice * 100) / 100;
+    }
+
     const updatedProduct = await prisma.product.update({
       where: { id },
       data: validated,

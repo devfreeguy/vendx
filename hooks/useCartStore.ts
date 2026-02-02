@@ -8,7 +8,7 @@ export interface CartItem {
   id: string; // product id
   title: string;
   price: number;
-  discountPrice?: number;
+  discountPrice?: number; // Renamed from discountPrice
   image?: string;
   vendor: { name: string };
   quantity: number;
@@ -123,7 +123,6 @@ export const useCartStore = create<CartState>()(
 
       clearCart: () => set({ items: [] }),
       setIsOpen: (isOpen) => set({ isOpen }),
-
       syncWithServer: async () => {
         const { isAuthenticated } = useAuthStore.getState();
         if (!isAuthenticated) return;
@@ -133,9 +132,29 @@ export const useCartStore = create<CartState>()(
         const { items: guestItems, isSynced } = get();
 
         try {
-          // If we have items AND we are NOT synced, perform merge (Sync)
-          if (guestItems.length > 0 && !isSynced) {
-            const syncId = nanoid(); // Generate unique ID for this sync attempt
+          // If already synced, just fetch the server truth
+          if (isSynced) {
+            const cart = (await api.get<any>("/cart")) as any;
+            if (cart && cart.items) {
+              const serverItems = cart.items.map((item: any) => ({
+                id: item.product.id,
+                title: item.product.title,
+                price: item.product.price,
+                image: item.product.images?.[0] || "",
+                vendor: { name: item.product.vendor?.name || "Vendor" },
+                discountPrice: item.product.discountPrice,
+                quantity: item.quantity,
+              }));
+              set({ items: serverItems, isSynced: true });
+            } else {
+              set({ items: [], isSynced: true });
+            }
+            return; // Exit early
+          }
+
+          // Only sync if we have guest items AND haven't synced yet
+          if (guestItems.length > 0) {
+            const syncId = nanoid();
 
             const payload = {
               items: guestItems.map((i) => ({
@@ -150,22 +169,20 @@ export const useCartStore = create<CartState>()(
               payload,
             )) as any;
 
-            if (response && response.items) {
-              const serverItems = response.items.map((item: any) => ({
+            if (response && response.data && response.data.items) {
+              const serverItems = response.data.items.map((item: any) => ({
                 id: item.product.id,
                 title: item.product.title,
                 price: item.product.price,
                 image: item.product.images?.[0] || "",
                 vendor: { name: item.product.vendor?.name || "Vendor" },
+                discountPrice: item.product.discountPrice,
                 quantity: item.quantity,
               }));
               set({ items: serverItems, isSynced: true });
             }
           } else {
-            // Otherwise, we just fetch the truth from server (GET)
-            // This happens if:
-            // 1. Guest cart was empty (nothing to merge).
-            // 2. We are already isSynced=true (don't re-merge).
+            // No guest items, just fetch server cart
             const cart = (await api.get<any>("/cart")) as any;
             if (cart && cart.items) {
               const serverItems = cart.items.map((item: any) => ({
@@ -174,11 +191,11 @@ export const useCartStore = create<CartState>()(
                 price: item.product.price,
                 image: item.product.images?.[0] || "",
                 vendor: { name: item.product.vendor?.name || "Vendor" },
+                discountPrice: item.product.discountPrice,
                 quantity: item.quantity,
               }));
               set({ items: serverItems, isSynced: true });
             } else {
-              // If cart is null/empty on server
               set({ items: [], isSynced: true });
             }
           }
@@ -201,5 +218,6 @@ export const useCartStore = create<CartState>()(
 useAuthStore.subscribe((state, prevState) => {
   if (prevState.user && !state.user) {
     useCartStore.getState().clearCart();
+    useCartStore.setState({ isSynced: false });
   }
 });
