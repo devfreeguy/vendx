@@ -28,7 +28,7 @@ export function Hero() {
         </h1>
 
         <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
-          Buy and sell premium gear with Bitcoin Cash. Secure, fast, and
+          Buy and sell premium products with Bitcoin Cash. Secure, fast, and
           vendor-dictated. Experience the next generation of e-commerce.
         </p>
 
