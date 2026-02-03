@@ -22,17 +22,6 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { useAuthStore } from "@/store/useAuthStore";
-import { Metadata } from "next";
-
-export const metadata: Metadata = {
-  title: "My Orders",
-  description: "View and track your order history on VendX.",
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
-
 export default function OrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

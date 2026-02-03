@@ -3,17 +3,6 @@
 import { CartContents } from "@/components/cart/CartContents";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
-import { Metadata } from "next";
-
-export const metadata: Metadata = {
-  title: "Shopping Cart",
-  description: "Review your cart and proceed to checkout on VendX.",
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
-
 export default function CartPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col">

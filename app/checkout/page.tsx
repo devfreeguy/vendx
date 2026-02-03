@@ -19,17 +19,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Metadata } from "next";
-
-export const metadata: Metadata = {
-  title: "Checkout",
-  description: "Complete your purchase securely on VendX.",
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
-
 type Address = {
   id: string;
   firstName: string;
