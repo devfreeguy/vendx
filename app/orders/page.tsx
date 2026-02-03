@@ -27,6 +27,11 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
   const { isAuthenticated } = useAuthStore();
 
+  // Set document title
+  useEffect(() => {
+    document.title = "My Orders | VendX";
+  }, []);
+
   useEffect(() => {
     const fetchOrders = async () => {
       try {

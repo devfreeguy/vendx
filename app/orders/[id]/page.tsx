@@ -25,6 +25,11 @@ export default function OrderPage() {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
+  // Set document title
+  useEffect(() => {
+    document.title = "Order Details | VendX";
+  }, []);
+
   useEffect(() => {
     const fetchOrder = async () => {
       try {
