@@ -53,7 +53,9 @@ export default async function proxy(request: NextRequest) {
   // Public paths that involve mutation (Login/Register)
   const isPublicAuthPath =
     pathname.startsWith("/api/auth/login") ||
-    pathname.startsWith("/api/auth/register");
+    pathname.startsWith("/api/auth/register") ||
+    pathname.startsWith("/api/auth/forgot-password") ||
+    pathname.startsWith("/api/auth/reset-password");
 
   // Mutating methods (POST, PUT, PATCH, DELETE) require auth, unless it's a public auth path
   if (

@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { TransactionStatus } from "@prisma/client";
 import { nanoid } from "nanoid";
 import axios from "axios";
+import { sendPaymentReceivedEmail } from "@/lib/email/email-service";
 
 interface TransactionMetadata {
   blockHeight: number;
@@ -386,11 +387,81 @@ export class BchMonitorServiceAPI {
 
       // If confirmed, mark order as PAID
       if (confirmations > 0) {
-        await prisma.order.update({
+        const updatedOrder = await prisma.order.update({
           where: { id: orderId },
           data: { status: "PAID" },
+          include: {
+            items: {
+              include: {
+                product: {
+                  include: {
+                    vendor: true,
+                  },
+                },
+              },
+            },
+            buyer: true,
+          },
         });
         console.log(`✅ Order ${orderId} marked as PAID`);
+
+        // Send payment received emails to vendors (non-blocking)
+        const baseUrl =
+          process.env.NEXT_PUBLIC_BASE_URL || "https://vendx.store";
+        const dashboardUrl = `${baseUrl}/dashboard/orders`;
+
+        // Group items by vendor
+        const vendorItemsMap = new Map<
+          string,
+          {
+            vendor: any;
+            items: Array<{
+              title: string;
+              quantity: number;
+              price: number;
+              image?: string;
+            }>;
+            totalAmount: number;
+          }
+        >();
+
+        updatedOrder.items.forEach((item) => {
+          const vendorId = item.product.vendorId;
+          if (!vendorItemsMap.has(vendorId)) {
+            vendorItemsMap.set(vendorId, {
+              vendor: item.product.vendor,
+              items: [],
+              totalAmount: 0,
+            });
+          }
+          const vendorData = vendorItemsMap.get(vendorId)!;
+          vendorData.items.push({
+            title: item.product.title,
+            quantity: item.quantity,
+            price: item.priceAtPurchase,
+            image: item.product.images[0],
+          });
+          vendorData.totalAmount += item.priceAtPurchase * item.quantity;
+        });
+
+        // Send email to each vendor
+        vendorItemsMap.forEach((vendorData, vendorId) => {
+          sendPaymentReceivedEmail({
+            orderId: updatedOrder.id,
+            vendorName: vendorData.vendor.name || "there",
+            vendorEmail: vendorData.vendor.email,
+            buyerName: updatedOrder.buyer.name || "Customer",
+            items: vendorData.items,
+            totalAmount: vendorData.totalAmount,
+            bchAmount: updatedOrder.bchAmount,
+            dashboardUrl,
+          }).catch((error: any) => {
+            console.error(
+              `Failed to send payment email to vendor ${vendorId}:`,
+              error,
+            );
+          });
+        });
       } else {
         // 0-conf: Just recorded as PENDING (which saves it from expiration), do NOT mark order as PAID yet.
         console.log(

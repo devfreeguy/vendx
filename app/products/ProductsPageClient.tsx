@@ -13,6 +13,7 @@ import {
   ProductCardSkeleton,
 } from "@/components/products/ProductCard";
 import { HeroBackground } from "@/components/ui/HeroBackground";
+import api from "@/lib/axios";
 
 export function ProductsPageClient() {
   const searchParams = useSearchParams();
@@ -109,12 +110,8 @@ function ProductGrid({ filters }: { filters: any }) {
         if (filters.inStock) params.append("inStock", "true");
         // price range logic could be added here if API supports it
 
-        const res = await fetch(`/api/products?${params.toString()}`);
-        const json = await res.json();
-
-        if (json.success) {
-          setProducts(json.data);
-        }
+        const data = await api.get(`/products?${params.toString()}`);
+        setProducts(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Failed to fetch products", err);
       } finally {

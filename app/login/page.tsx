@@ -130,14 +130,24 @@ export default function LoginPage() {
               required
             />
 
-            <Input
-              label="Password"
-              name="password"
-              type="password"
-              placeholder="••••••••"
-              icon={Lock}
-              required
-            />
+            <div className="space-y-2">
+              <Input
+                label="Password"
+                name="password"
+                type="password"
+                placeholder="••••••••"
+                icon={Lock}
+                required
+              />
+              <div className="flex justify-end">
+                <Link
+                  href="/forgot-password"
+                  className="text-sm text-primary hover:text-primary/80"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+            </div>
 
             <button
               type="submit"

@@ -2,6 +2,7 @@
 
 import { ProductForm } from "@/components/dashboard/ProductForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import api from "@/lib/axios";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -23,18 +24,7 @@ export default function NewProductPage() {
     };
 
     try {
-      const res = await fetch("/api/products", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const json = await res.json();
-
-      if (!res.ok || json.success === false) {
-        throw new Error(json.error?.message || "Failed to create product");
-      }
-
+      await api.post("/products", payload);
       router.push("/dashboard");
       router.refresh();
     } catch (err: any) {

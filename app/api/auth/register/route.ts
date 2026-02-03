@@ -5,6 +5,7 @@ import { z } from "zod";
 import { nanoid } from "nanoid";
 import { createErrorResponse } from "@/lib/api-error";
 import { registerSchema } from "@/lib/schemas";
+import { sendWelcomeEmail } from "@/lib/email/email-service";
 
 export async function POST(req: Request) {
   try {
@@ -34,6 +35,19 @@ export async function POST(req: Request) {
 
     // Remove password from response
     const { password, ...userWithoutPassword } = user;
+
+    // Send welcome email (non-blocking)
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://vendx.store";
+    const profileUrl = `${baseUrl}/dashboard`;
+
+    sendWelcomeEmail({
+      name: user.name || "there",
+      email: user.email,
+      profileUrl,
+    }).catch((error: any) => {
+      console.error("Failed to send welcome email:", error);
+      // Don't fail registration if email fails
+    });
 
     return NextResponse.json(
       { success: true, data: userWithoutPassword },

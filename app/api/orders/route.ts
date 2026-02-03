@@ -7,6 +7,7 @@ import { createErrorResponse } from "@/lib/api-error";
 import { createOrderSchema } from "@/lib/schemas";
 import { calculateBchAmount } from "@/lib/bch/quote";
 import { deriveAddress } from "@/lib/bch/wallet";
+import { sendOrderConfirmationEmail } from "@/lib/email/email-service";
 
 export async function POST(req: Request) {
   const session = await getSession();
@@ -105,8 +106,32 @@ export async function POST(req: Request) {
       return await tx.order.update({
         where: { id: createdOrder.id },
         data: { bchAddress: address },
-        include: { items: true },
+        include: { items: { include: { product: true } }, buyer: true },
       });
+    });
+
+    // Send order confirmation email (non-blocking)
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://vendx.store";
+    const orderUrl = `${baseUrl}/orders/${order.id}`;
+
+    sendOrderConfirmationEmail({
+      orderId: order.id,
+      buyerName: order.buyer.name || "there",
+      buyerEmail: order.buyer.email,
+      items: order.items.map((item) => ({
+        title: item.product.title,
+        quantity: item.quantity,
+        price: item.priceAtPurchase,
+        image: item.product.images[0],
+      })),
+      totalAmount: order.totalAmount,
+      bchAmount: order.bchAmount,
+      bchAddress: order.bchAddress,
+      orderUrl,
+      expiresAt: order.rateExpiresAt,
+    }).catch((error: any) => {
+      console.error("Failed to send order confirmation email:", error);
+      // Don't fail order creation if email fails
     });
 
     return NextResponse.json({ success: true, data: order }, { status: 201 });

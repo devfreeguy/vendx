@@ -4,7 +4,7 @@ import { Logo } from "@/components/layout/header/Logo";
 import { Input } from "@/components/ui/input";
 import { PageLoader } from "@/components/ui/PageLoader";
 import { Button } from "@/components/ui/button";
-import { ApiError } from "@/lib/axios";
+import api, { ApiError } from "@/lib/axios";
 import { useAuthStore } from "@/store/useAuthStore";
 import { User as UserIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -50,16 +50,10 @@ export default function OnboardingPage() {
         uploadFormData.append("file", file);
         uploadFormData.append("folder", "users/profile");
 
-        const res = await fetch("/api/upload", {
-          method: "POST",
-          body: uploadFormData,
+        const uploadResult: any = await api.post("/upload", uploadFormData, {
+          headers: { "Content-Type": "multipart/form-data" },
         });
-        const json = await res.json();
-
-        if (!res.ok || json.success === false) {
-          throw new Error(json.error?.message || "Image upload failed");
-        }
-        profilePictureUrl = json.data.url;
+        profilePictureUrl = uploadResult.url;
       }
 
       await updateProfile(name, profilePictureUrl);
