@@ -32,8 +32,8 @@ export async function POST(req: Request) {
         .update(resetToken)
         .digest("hex");
 
-      // Token expires in 1 hour
-      const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+      // Token expires in 15 minutes
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
       // Store token in database
       await prisma.passwordResetToken.create({
@@ -55,7 +55,7 @@ export async function POST(req: Request) {
         name: user.name || "there",
         email: user.email,
         resetUrl,
-        expiresIn: "1 hour",
+        expiresIn: "15 minutes",
       });
 
       console.log(`✅ Password reset email sent to ${email}`);

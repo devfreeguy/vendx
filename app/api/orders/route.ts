@@ -128,7 +128,7 @@ export async function POST(req: Request) {
       bchAmount: order.bchAmount,
       bchAddress: order.bchAddress,
       orderUrl,
-      expiresAt: order.rateExpiresAt,
+      expiresAt: order.rateExpiresAt.toISOString(),
     }).catch((error: any) => {
       console.error("Failed to send order confirmation email:", error);
       // Don't fail order creation if email fails
