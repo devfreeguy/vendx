@@ -11,9 +11,42 @@ import { Footer } from "@/components/layout/Footer";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ProductCard } from "@/components/products/ProductCard"; // Assuming this exists or needs check
 import { Calendar, Package, Star } from "lucide-react";
+import { Metadata } from "next";
+import { generateVendorMetadata } from "@/lib/seo";
 
 // Check if ProductCard exists, if not, I'll need to create a simple card or check imports.
 // I will assume standard card structure or verify in next step. For now I'll create a basic layout.
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+
+  const vendor = await prisma.user.findUnique({
+    where: { id },
+    include: {
+      products: {
+        where: { stock: { gt: 0 } },
+      },
+    },
+  });
+
+  if (!vendor || vendor.role !== "VENDOR") {
+    return {
+      title: "Vendor Not Found",
+      description: "The requested vendor could not be found.",
+    };
+  }
+
+  return generateVendorMetadata({
+    name: vendor.name,
+    email: vendor.email,
+    profilePicture: vendor.profilePicture,
+    productCount: vendor.products.length,
+  });
+}
 
 export default async function VendorPublicPage({
   params,

@@ -8,6 +8,41 @@ import { BackButton } from "@/components/ui/BackButton";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { HeroBackground } from "@/components/ui/HeroBackground";
+import { Metadata } from "next";
+import {
+  generateProductMetadata,
+  generateProductStructuredData,
+} from "@/lib/seo";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ productId: string }>;
+}): Promise<Metadata> {
+  const resolvedParams = await params;
+  const product = await prisma.product.findUnique({
+    where: { id: resolvedParams.productId },
+    include: { vendor: true },
+  });
+
+  if (!product) {
+    return {
+      title: "Product Not Found",
+      description: "The requested product could not be found.",
+    };
+  }
+
+  return generateProductMetadata({
+    title: product.title,
+    description: product.description,
+    price: product.price,
+    discountPrice: product.discountPrice,
+    images: product.images,
+    category: product.category,
+    vendor: { name: product.vendor.name },
+    tags: product.tags,
+  });
+}
 
 export default async function ProductDetailsPage({
   params,
@@ -59,8 +94,25 @@ export default async function ProductDetailsPage({
     specs,
   };
 
+  // Generate structured data for SEO
+  const structuredData = generateProductStructuredData({
+    id: product.id,
+    title: product.title,
+    description: product.description,
+    price: product.price,
+    discountPrice: product.discountPrice,
+    images: product.images,
+    category: product.category,
+    stock: product.stock,
+    vendor: { name: product.vendor.name },
+  });
+
   return (
     <div className="min-h-screen bg-background flex flex-col relative">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
       <Header />
 
       <main className="flex-1 pt-24 pb-20 max-w-screen relative">

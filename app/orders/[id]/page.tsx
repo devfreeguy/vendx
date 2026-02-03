@@ -18,6 +18,16 @@ import {
 import Link from "next/link";
 import { HeroBackground } from "@/components/ui/HeroBackground";
 import { CountdownTimer } from "@/components/ui/CountdownTimer";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Order Details",
+  description: "View your order details and payment status on VendX.",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default function OrderPage() {
   const params = useParams();
