@@ -40,7 +40,7 @@ function ResetPasswordForm() {
     }
 
     try {
-      await api.post("/auth/reset-password", { token, password });
+      await api.post("/auth/reset-password", { token, newPassword: password });
       setSuccess(true);
       setTimeout(() => {
         router.push("/login");
