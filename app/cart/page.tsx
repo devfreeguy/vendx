@@ -3,7 +3,13 @@
 import { CartContents } from "@/components/cart/CartContents";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
+import { useEffect } from "react";
+
 export default function CartPage() {
+  useEffect(() => {
+    document.title = "Shopping Cart | VendX";
+  }, []);
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />

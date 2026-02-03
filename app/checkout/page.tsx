@@ -41,6 +41,11 @@ export default function CheckoutPage() {
   const [selectedAddressId, setSelectedAddressId] = useState<string>("new");
   const [saveAddress, setSaveAddress] = useState(true);
 
+  // Set document title
+  useEffect(() => {
+    document.title = "Checkout | VendX";
+  }, []);
+
   // Form State
   const [formData, setFormData] = useState({
     firstName: "",
