@@ -15,6 +15,12 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+
+  // Include WASM files for serverless deployment on Vercel
+  // This ensures tiny-secp256k1's WASM file is bundled with API routes
+  outputFileTracingIncludes: {
+    "/api/**": ["./node_modules/tiny-secp256k1/**/*.wasm"],
+  },
 };
 
 export default nextConfig;
