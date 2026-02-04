@@ -6,6 +6,8 @@ const SECRET_KEY =
   process.env.JWT_SECRET || "super-secret-key-change-this-in-env";
 const key = new TextEncoder().encode(SECRET_KEY);
 
+export const runtime = "nodejs";
+
 export async function GET(request: Request) {
   try {
     const cookieHeader = request.headers.get("cookie");

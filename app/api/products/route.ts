@@ -7,6 +7,8 @@ import { nanoid } from "nanoid";
 import { createErrorResponse } from "@/lib/api-error";
 import { productSchema } from "@/lib/schemas";
 
+export const runtime = "nodejs";
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const page = parseInt(searchParams.get("page") || "1");

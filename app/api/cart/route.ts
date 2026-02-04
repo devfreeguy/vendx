@@ -6,6 +6,8 @@ import { z } from "zod";
 import { createErrorResponse } from "@/lib/api-error";
 import { addToCartSchema } from "@/lib/schemas";
 
+export const runtime = "nodejs";
+
 export async function GET(req: Request) {
   const session = await getSession();
   if (!session) {

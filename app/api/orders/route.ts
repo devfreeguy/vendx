@@ -9,6 +9,9 @@ import { calculateBchAmount } from "@/lib/bch/quote";
 import { deriveAddress } from "@/lib/bch/wallet";
 import { sendOrderConfirmationEmail } from "@/lib/email/email-service";
 
+// Force Node.js runtime for Prisma and blockchain operations
+export const runtime = "nodejs";
+
 export async function POST(req: Request) {
   const session = await getSession();
   if (!session || session.role !== "BUYER") {

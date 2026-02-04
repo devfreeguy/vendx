@@ -7,6 +7,8 @@ import { createErrorResponse } from "@/lib/api-error";
 import { registerSchema } from "@/lib/schemas";
 import { sendWelcomeEmail } from "@/lib/email/email-service";
 
+export const runtime = "nodejs";
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();

@@ -5,6 +5,8 @@ import { z } from "zod";
 import { addressSchema } from "@/lib/schemas";
 import { createErrorResponse } from "@/lib/api-error";
 
+export const runtime = "nodejs";
+
 export async function GET(req: Request) {
   const session = await getSession();
   if (!session) {

@@ -6,6 +6,8 @@ import { createErrorResponse } from "@/lib/api-error";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 
+export const runtime = "nodejs";
+
 export async function GET(req: Request) {
   const session = await getSession();
   if (!session) {

@@ -12,6 +12,8 @@ const idempotentSyncSchema = syncCartSchema.extend({
   syncId: z.string().optional(),
 });
 
+export const runtime = "nodejs";
+
 export async function POST(req: Request) {
   const session = await getSession();
   if (!session) {

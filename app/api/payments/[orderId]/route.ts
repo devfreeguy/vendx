@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { createErrorResponse } from "@/lib/api-error";
 
+export const runtime = "nodejs";
+
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ orderId: string }> },

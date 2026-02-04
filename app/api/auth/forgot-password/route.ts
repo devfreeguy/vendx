@@ -10,6 +10,8 @@ const forgotPasswordSchema = z.object({
   email: z.string().email("Invalid email address"),
 });
 
+export const runtime = "nodejs";
+
 export async function POST(req: Request) {
   console.log("🔍 Forgot password endpoint called");
   try {
