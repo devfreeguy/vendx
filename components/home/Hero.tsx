@@ -16,14 +16,14 @@ export function Hero() {
             <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
           </span>
           <span className="text-xs font-medium text-muted-foreground">
-            VendX Market v1.0 is Live
+            VendX Store v1.0 is Live
           </span>
         </div>
 
         <h1 className="text-5xl md:text-7xl font-bold text-foreground tracking-tight mb-6 max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100">
           The Future of <br className="hidden md:block" />
           <span className="text-transparent bg-clip-text bg-linear-to-r from-foreground via-muted-foreground to-muted-foreground">
-            Decentralized Commerce
+            Decentralized E-commerce
           </span>
         </h1>
 

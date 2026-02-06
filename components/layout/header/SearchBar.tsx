@@ -9,7 +9,7 @@ export function SearchBar() {
         </div>
         <input
           type="text"
-          placeholder="Search for gear..."
+          placeholder="Search for products..."
           className="block w-full rounded-lg border-0 bg-secondary py-2.5 pl-10 pr-4 text-foreground ring-1 ring-inset ring-input placeholder:text-muted-foreground focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6 transition-all"
         />
       </div>
